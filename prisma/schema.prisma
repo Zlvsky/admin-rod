@@ -1,0 +1,865 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String           @id @unique @default(uuid())
+  email            String           @unique
+  password         String
+  createdAt        DateTime         @default(now())
+  index            Int              @unique @default(autoincrement())
+  appleUserId      String?          @unique
+  googleUserId     String?          @unique
+  isTemporary      Boolean          @default(false)
+  codeExpiresAt    DateTime?
+  premiumExpiresAt DateTime?
+  verificationCode String?
+  refreshToken     String?
+  characters       Character[]
+  premiumAccounts  PremiumAccount[]
+  transactions     Transaction[]
+}
+
+model Character {
+  id               String            @id @default(uuid())
+  userId           String
+  name             String            @unique
+  description      String
+  createdAt        DateTime          @default(now())
+  level            Int               @default(1)
+  experience       Int               @default(0)
+  honor            Int               @default(0)
+  stamina          Int               @default(100)
+  gold             Int               @default(0)
+  coins            Int               @default(0)
+  mount            Int               @default(0)
+  mountEnd         DateTime?
+  location         Int               @default(0)
+  avatarId         Int               @default(0)
+  health           Int               @default(35)
+  staminaCooldown  DateTime?
+  availableAvatars Int[]             @default([0])
+  isPremium        Boolean           @default(false)
+  activity         Activity?
+  arenaRanking     ArenaRanking?
+  bestiary         Bestiary[]
+  user             User              @relation(fields: [userId], references: [id])
+  depths           Depths?
+  dungeon          Dungeon?
+  corruptedDungeon CorruptedDungeon?
+  equipment        Equipment?
+  expedition       Expedition?
+  mountInventory   MountInventory?
+  guildCheckins    GuildCheckin[]
+  guildInvite      GuildInvite[]
+  guildMember      GuildMember?
+  guildRequest     GuildRequest[]
+  huntingBosses    HuntingBosses?
+  inbox            Inbox?
+  inventory        Inventory?
+  merchant         Merchant[]
+  missions         Missions?
+  quests           Quest[]
+  stages           Stage[]
+  statistics       Statistics?
+  tasks            Tasks?
+  village          Village?
+  homestead        Homestead?
+}
+
+model Statistics {
+  id           Int       @id @default(autoincrement())
+  characterId  String    @unique
+  strength     Int       @default(0)
+  dexterity    Int       @default(0)
+  constitution Int       @default(0)
+  defense      Int       @default(0)
+  luck         Int       @default(0)
+  character    Character @relation(fields: [characterId], references: [id])
+}
+
+model Stage {
+  id          Int          @id @default(autoincrement())
+  characterId String
+  unlocked    Boolean      @default(false)
+  finished    Boolean      @default(false)
+  location    Int          @default(0)
+  checkpoints Checkpoint[]
+  character   Character    @relation(fields: [characterId], references: [id])
+}
+
+model Checkpoint {
+  id         Int     @id @default(autoincrement())
+  stageId    Int
+  finished   Boolean @default(false)
+  unlocked   Boolean @default(false)
+  progress   Int     @default(0)
+  expBonus   Boolean @default(false)
+  goldBonus  Boolean @default(false)
+  honorBonus Boolean @default(false)
+  itemBonus  Boolean @default(false)
+  stage      Stage   @relation(fields: [stageId], references: [id])
+}
+
+model DungeonCheckpoint {
+  id                 Int               @id @default(autoincrement())
+  dungeonId          Int?
+  corruptedDungeonId Int?
+  progress           Int               @default(0)
+  finished           Boolean           @default(false)
+  name_id            String
+  claimedTreasures   Int[]             @default([])
+  dungeon            Dungeon?          @relation(fields: [dungeonId], references: [id])
+  corruptedDungeon   CorruptedDungeon? @relation(fields: [corruptedDungeonId], references: [id])
+}
+
+model Dungeon {
+  id          Int                 @id @default(autoincrement())
+  characterId String              @unique
+  cooldownTo  DateTime?
+  character   Character           @relation(fields: [characterId], references: [id])
+  checkpoints DungeonCheckpoint[]
+}
+
+model CorruptedDungeon {
+  id          Int                 @id @default(autoincrement())
+  characterId String              @unique
+  character   Character           @relation(fields: [characterId], references: [id])
+  checkpoints DungeonCheckpoint[]
+}
+
+model Depths {
+  id              Int       @id @default(autoincrement())
+  characterId     String    @unique
+  cooldownTo      DateTime?
+  progress        Int       @default(0)
+  enemyBuff       Json?
+  bestScore       Int       @default(0)
+  lastStartDate   DateTime?
+  treasureRewards Json[]    @default([])
+  catchupAwarded  Boolean   @default(false)
+  character       Character @relation(fields: [characterId], references: [id])
+}
+
+model Missions {
+  id                Int       @id @default(autoincrement())
+  characterId       String    @unique
+  availableMissions Json[]    @default([])
+  currentMissions   Json[]    @default([])
+  lastRefresh       DateTime?
+  completedMissions String[]  @default([])
+  character         Character @relation(fields: [characterId], references: [id])
+}
+
+model Village {
+  id          Int        @id @default(autoincrement())
+  characterId String     @unique
+  metal       Int        @default(0)
+  stone       Int        @default(0)
+  wood        Int        @default(0)
+  rune1       Int        @default(0)
+  buildings   Building[]
+  enchants    Enchant[]
+  character   Character  @relation(fields: [characterId], references: [id])
+}
+
+model Enchant {
+  id          Int     @id @default(autoincrement())
+  villageId   Int
+  enchantData Json
+  village     Village @relation(fields: [villageId], references: [id])
+}
+
+model Building {
+  id           Int       @id @default(autoincrement())
+  villageId    Int
+  name         String
+  level        Int       @default(0)
+  buildStarted DateTime?
+  buildFinish  DateTime?
+  resources    Int       @default(0)
+  lastClaimed  DateTime  @default(now())
+  village      Village   @relation(fields: [villageId], references: [id])
+}
+
+model Item {
+  id                Int             @id @default(autoincrement())
+  name              String
+  type              String
+  description       String
+  count             Int             @default(1)
+  requiredLevel     Int             @default(0)
+  effect1           Int             @default(0)
+  effect2           Int             @default(0)
+  upgrade           Int             @default(0)
+  consumable        Boolean         @default(false)
+  assetId           Int
+  gold              Int
+  inventoryId       Int?
+  merchantId        Int?
+  mountInventoryId  Int?
+  quality           Int             @default(0)
+  epic              Boolean         @default(false)
+  levelRange        Json?
+  enchantment       Json?
+  jewel             Json?
+  isFromMerchant    Boolean         @default(false)
+  equipmentArmor    Equipment?      @relation("ArmorItem")
+  equipmentBoots    Equipment?      @relation("BootsItem")
+  equipmentHead     Equipment?      @relation("HeadItem")
+  equipmentLegs     Equipment?      @relation("LegsItem")
+  equipmentNecklace Equipment?      @relation("NecklaceItem")
+  equipmentOffhand  Equipment?      @relation("OffhandItem")
+  equipmentRing     Equipment?      @relation("RingItem")
+  equipmentWeapon   Equipment?      @relation("WeaponItem")
+  inventory         Inventory?      @relation(fields: [inventoryId], references: [id])
+  merchant          Merchant?       @relation(fields: [merchantId], references: [id])
+  mountInventory    MountInventory? @relation(fields: [mountInventoryId], references: [id])
+}
+
+model Equipment {
+  id             Int       @id @default(autoincrement())
+  characterId    String    @unique
+  armorItemId    Int?      @unique
+  bootsItemId    Int?      @unique
+  headItemId     Int?      @unique
+  legsItemId     Int?      @unique
+  necklaceItemId Int?      @unique
+  offhandItemId  Int?      @unique
+  ringItemId     Int?      @unique
+  weaponItemId   Int?      @unique
+  armorItem      Item?     @relation("ArmorItem", fields: [armorItemId], references: [id])
+  bootsItem      Item?     @relation("BootsItem", fields: [bootsItemId], references: [id])
+  character      Character @relation(fields: [characterId], references: [id])
+  headItem       Item?     @relation("HeadItem", fields: [headItemId], references: [id])
+  legsItem       Item?     @relation("LegsItem", fields: [legsItemId], references: [id])
+  necklaceItem   Item?     @relation("NecklaceItem", fields: [necklaceItemId], references: [id])
+  offhandItem    Item?     @relation("OffhandItem", fields: [offhandItemId], references: [id])
+  ringItem       Item?     @relation("RingItem", fields: [ringItemId], references: [id])
+  weaponItem     Item?     @relation("WeaponItem", fields: [weaponItemId], references: [id])
+}
+
+model Inventory {
+  id          Int       @id @default(autoincrement())
+  characterId String    @unique
+  maxItems    Int       @default(12)
+  character   Character @relation(fields: [characterId], references: [id])
+  items       Item[]
+}
+
+model MountInventory {
+  id          Int       @id @default(autoincrement())
+  characterId String    @unique
+  maxItems    Int       @default(12)
+  character   Character @relation(fields: [characterId], references: [id])
+  items       Item[]
+}
+
+model Merchant {
+  id          Int          @id @default(autoincrement())
+  characterId String
+  lastRefrsh  DateTime?
+  type        MerchantType
+  items       Item[]
+  character   Character    @relation(fields: [characterId], references: [id])
+}
+
+model Activity {
+  id              Int       @id @default(autoincrement())
+  characterId     String    @unique
+  type            Int       @default(0)
+  subType         Int       @default(0)
+  startedAt       DateTime?
+  endedAt         DateTime?
+  lastClaimed     DateTime?
+  inputResources  Json?     // Stores consumed resources for construction: { name, count, quality }[]
+  outputResources Json?     // Stores pre-calculated output: { claimedResources, totalResources, gatheringRate }
+  character       Character @relation(fields: [characterId], references: [id])
+}
+
+model Expedition {
+  id             String    @id @default(uuid())
+  characterId    String    @unique
+  startedAt      DateTime  @default(now())
+  endsAt         DateTime
+  huntingPlaceId String
+  enemyId        String
+  rewards        Json[]    @default([])
+  character      Character @relation(fields: [characterId], references: [id])
+}
+
+model Quest {
+  id          Int       @id @default(autoincrement())
+  characterId String
+  enemyId     String
+  assetId     String?
+  enemyName   String
+  location    String
+  enemyLevel  Int
+  isPack      Boolean   @default(false)
+  isBoss      Boolean   @default(false)
+  experience  Int
+  gold        Int
+  honorReward Int       @default(0)
+  itemReward  Json?
+  enemyStats  Json
+  createdAt   DateTime  @default(now())
+  questId     Int       @default(100)
+  staminaCost Int       @default(1)
+  rewardType  String    @default("BALANCED")
+  character   Character @relation(fields: [characterId], references: [id])
+}
+
+model Task {
+  id         Int      @id @default(autoincrement())
+  difficulty String // 'EASY', 'MEDIUM', 'HARD'
+  placeKey   String
+  enemyId    String
+  progress   Int      @default(0)
+  target     Int
+  points     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  tasksActiveTask Tasks?    @relation("ActiveTask")
+  bestiaryTask    Bestiary? @relation("BestiaryTask")
+}
+
+model Bestiary {
+  id              Int       @id @default(autoincrement())
+  characterId     String
+  enemyId         String
+  enemyName       String?
+  defeatedCount   Int       @default(0)
+  fightsCount     Int       @default(0)
+  goldBonus       Boolean   @default(false)
+  itemBonus       Boolean   @default(false)
+  expBonus        Boolean   @default(false)
+  honorBonus      Boolean   @default(false)
+  detailsUnlocked Boolean   @default(false)
+  firstDefeated   DateTime  @default(now())
+  lastDefeated    DateTime  @default(now())
+  taskId          Int?      @unique
+  character       Character @relation(fields: [characterId], references: [id])
+  task            Task?     @relation("BestiaryTask", fields: [taskId], references: [id])
+
+  @@unique([characterId, enemyId])
+}
+
+model Tasks {
+  id                   Int       @id @default(autoincrement())
+  characterId          String    @unique
+  points               Int       @default(0)
+  allTimePoints        Int       @default(0)
+  completedTasks       Int       @default(0)
+  nextRefreshAvailable DateTime?
+  availableTasks       Json[]    @default([])
+  activeTaskId         Int?      @unique
+  character            Character @relation(fields: [characterId], references: [id])
+  activeTask           Task?     @relation("ActiveTask", fields: [activeTaskId], references: [id])
+}
+
+model ArenaLeague {
+  id             Int            @id @default(autoincrement())
+  minLevel       Int
+  maxLevel       Int
+  name           String
+  hourlyGold     Int            @default(100)
+  potIncrement   Int            @default(50)
+  currentPot     Int            @default(0)
+  potLastUpdated DateTime       @default(now())
+  battles        ArenaBattle[]
+  rankings       ArenaRanking[]
+
+  @@unique([minLevel, maxLevel])
+}
+
+model ArenaRanking {
+  id              Int           @id @default(autoincrement())
+  characterId     String        @unique
+  leagueId        Int
+  rank            Int
+  honor           Int           @default(0)
+  totalWins       Int           @default(0)
+  totalLosses     Int           @default(0)
+  winStreak       Int           @default(0)
+  lastBattleAt    DateTime?
+  lastRewardAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  attackerBattles ArenaBattle[] @relation("AttackerBattles")
+  defenderBattles ArenaBattle[] @relation("DefenderBattles")
+  character       Character     @relation(fields: [characterId], references: [id])
+  league          ArenaLeague   @relation(fields: [leagueId], references: [id])
+
+  @@unique([leagueId, rank])
+}
+
+model ArenaBattle {
+  id                  Int          @id @default(autoincrement())
+  leagueId            Int
+  attackerId          String
+  defenderId          String
+  attackerRankBefore  Int
+  defenderRankBefore  Int
+  attackerLevelBefore Int
+  defenderLevelBefore Int
+  winner              String
+  attackerDamageDealt Int
+  defenderDamageDealt Int
+  battleDuration      Int
+  attackerRankAfter   Int
+  defenderRankAfter   Int
+  attackerExpGained   Int          @default(0)
+  defenderExpGained   Int          @default(0)
+  attackerGoldGained  Int          @default(0)
+  defenderGoldGained  Int          @default(0)
+  attackerHonorGained Int          @default(0)
+  defenderHonorGained Int          @default(0)
+  isCrossServer       Boolean      @default(false)
+  wasDefenderOffline  Boolean      @default(false)
+  potClaimed          Int          @default(0)
+  createdAt           DateTime     @default(now())
+  attacker            ArenaRanking @relation("AttackerBattles", fields: [attackerId], references: [characterId])
+  defender            ArenaRanking @relation("DefenderBattles", fields: [defenderId], references: [characterId])
+  league              ArenaLeague  @relation(fields: [leagueId], references: [id])
+}
+
+model GuildMember {
+  id               Int             @id @default(autoincrement())
+  characterId      String          @unique
+  guildId          Int
+  joined           DateTime        @default(now())
+  lastActive       DateTime?       @default(now())
+  rank             GuildMemberRank @default(MEMBER)
+  goldDonated      Int             @default(0)
+  coinsDonated     Int             @default(0)
+  isDefending      Boolean         @default(false)
+  isAttacking      Boolean         @default(false)
+  isRaiding        Boolean         @default(false)
+  isWorldBoss      Boolean         @default(false)
+  checkinStreak    Int             @default(0)
+  lastCheckinDate  DateTime?
+  totalCheckins    Int             @default(0)
+  warHealth        Int             @default(100)
+  warsFought       Int             @default(0)
+  warsParticipated Int             @default(0)
+  discordRoleId    String?
+  character        Character       @relation(fields: [characterId], references: [id])
+  guild            Guild           @relation(fields: [guildId], references: [id])
+}
+
+model GuildInvite {
+  id          Int       @id @default(autoincrement())
+  guildId     Int
+  characterId String
+  invitedAt   DateTime  @default(now())
+  character   Character @relation(fields: [characterId], references: [id])
+  guild       Guild     @relation(fields: [guildId], references: [id])
+}
+
+model GuildRequest {
+  id          Int       @id @default(autoincrement())
+  guildId     Int
+  characterId String
+  requestedAt DateTime  @default(now())
+  character   Character @relation(fields: [characterId], references: [id])
+  guild       Guild     @relation(fields: [guildId], references: [id])
+}
+
+model GuildBuilding {
+  id      Int               @id @default(autoincrement())
+  guildId Int
+  type    GuildBuildingType
+  level   Int               @default(0)
+  guild   Guild             @relation(fields: [guildId], references: [id])
+}
+
+model Guild {
+  id                    Int              @id @default(autoincrement())
+  name                  String
+  tag                   String
+  description           String
+  emblem                Int?
+  honor                 Int              @default(200)
+  createdAt             DateTime         @default(now())
+  // raid number is deprecated, kept for backward compatibility
+  raid                  Int              @default(0)
+  status                GuildStatus
+  memberLimit           Int              @default(5)
+  attackingId           Int?
+  gold                  Int              @default(0)
+  coins                 Int              @default(0)
+  checkinBonusActive    Boolean          @default(false)
+  checkinBonusExpiresAt DateTime?
+  goldBankCapacity      Int              @default(10000)
+  tokens                Int              @default(0)
+  warCooldownExpiresAt  DateTime?
+  lastWarEndedAt        DateTime?
+  raidLevel             Int              @default(1)
+  raidCooldownExpiresAt DateTime?
+  discordChannelId      String?
+  discordGuildId        String?
+  discordWebhookUrl     String?
+  discordChannelName    String?
+  discordRoleId         String?
+  discordInviteLink     String?
+  attacking             Guild?           @relation("GuildToGuild", fields: [attackingId], references: [id])
+  attackedBy            Guild[]          @relation("GuildToGuild")
+  buildings             GuildBuilding[]
+  checkins              GuildCheckin[]
+  invites               GuildInvite[]
+  members               GuildMember[]
+  messages              GuildMessage[]
+  raids                 GuildRaid[]
+  requests              GuildRequest[]
+  worldBosses           GuildWorldBoss[]
+}
+
+model GuildCheckin {
+  id           Int       @id @default(autoincrement())
+  guildId      Int
+  characterId  String
+  checkinDate  DateTime  @default(now())
+  tokensEarned Int       @default(0)
+  character    Character @relation(fields: [characterId], references: [id])
+  guild        Guild     @relation(fields: [guildId], references: [id])
+
+  @@unique([guildId, characterId, checkinDate])
+}
+
+model GuildWar {
+  id                  Int            @id @default(autoincrement())
+  attackingGuildId    Int
+  defendingGuildId    Int
+  winnerId            Int?
+  fightExpiresAt      DateTime
+  goldCost            Int            @default(1000)
+  participationEndsAt DateTime
+  status              String         @default("PARTICIPATION")
+  viewedBy            String[]       @default([])
+  fight               GuildWarFight?
+}
+
+model GuildWarFight {
+  id           Int      @id @default(autoincrement())
+  warId        Int      @unique
+  fightData    String
+  winner       String
+  createdAt    DateTime @default(now())
+  honorChanges Json?
+  rankChanges  Json?
+  war          GuildWar @relation(fields: [warId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// GUILD RAID SYSTEM
+// ==========================================
+
+model GuildRaid {
+  id                  Int             @id @default(autoincrement())
+  guildId             Int
+  raidLevel           Int             @default(1)
+  bossName            String
+  status              String          @default("PARTICIPATION") // PARTICIPATION, READY_TO_FIGHT, COMPLETED, FAILED
+  participationEndsAt DateTime
+  fightExpiresAt      DateTime
+  createdAt           DateTime        @default(now())
+  viewedBy            String[]        @default([])
+  guild               Guild           @relation(fields: [guildId], references: [id])
+  fight               GuildRaidFight?
+}
+
+model GuildRaidFight {
+  id        Int       @id @default(autoincrement())
+  raidId    Int       @unique
+  fightData String
+  victory   Boolean
+  createdAt DateTime  @default(now())
+  rewards   Json?
+  raid      GuildRaid @relation(fields: [raidId], references: [id], onDelete: Cascade)
+}
+
+model GuildMessage {
+  id            String   @id @default(uuid())
+  guildId       Int
+  characterId   String
+  characterName String
+  message       String
+  source        String   @default("game")
+  timeSent      DateTime @default(now())
+  guild         Guild    @relation(fields: [guildId], references: [id])
+}
+
+model PremiumAccount {
+  id           Int                @id @default(autoincrement())
+  userId       String
+  accountType  PremiumAccountType
+  accountEmail String
+  isVerified   Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  user         User               @relation(fields: [userId], references: [id])
+
+  @@unique([userId, accountType])
+}
+
+model Transaction {
+  id              String             @id @default(uuid())
+  userId          String
+  transactionId   String             @unique
+  accountType     PremiumAccountType
+  transactionType TransactionType
+  amount          Float
+  currency        String             @default("USD")
+  coinsAwarded    Int                @default(0)
+  premiumDays     Int                @default(0)
+  isProcessed     Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  processedAt     DateTime?
+  externalData    Json?
+  user            User               @relation(fields: [userId], references: [id])
+}
+
+model DailyAverageLevel {
+  id           Int      @id @default(autoincrement())
+  averageLevel Float
+  date         DateTime @unique @default(now())
+}
+
+model Inbox {
+  id          Int       @id @default(autoincrement())
+  characterId String    @unique
+  messages    Json[]    @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  character   Character @relation(fields: [characterId], references: [id])
+}
+
+model HuntingBosses {
+  id          Int       @id @default(autoincrement())
+  characterId String    @unique
+  bosses      Json[]    @default([])
+  character   Character @relation(fields: [characterId], references: [id])
+}
+
+model WorldBoss {
+  id                          Int              @id @default(autoincrement())
+  participationEndsAt         DateTime
+  fightExpiresAt              DateTime
+  maxHealth                   Int
+  health                      Int
+  leaderboard                 Json[]           @default([])
+  lastBattleAt                DateTime?
+  lastBattleRewards           Json[]           @default([])
+  nextBossGuildParticipations String[]         @default([])
+  guildWorldBosses            GuildWorldBoss[]
+}
+
+model GuildWorldBoss {
+  id                Int       @id @default(autoincrement())
+  guildId           Int
+  worldBossId       Int
+  status            String    @default("PARTICIPATION")
+  viewedBy          String[]  @default([])
+  participationData Json[]    @default([])
+  guild             Guild     @relation(fields: [guildId], references: [id])
+  worldBoss         WorldBoss @relation(fields: [worldBossId], references: [id])
+
+  @@unique([guildId, worldBossId])
+}
+
+enum MerchantType {
+  ARMORY
+  ALCHEMIST
+  WANDERER
+}
+
+enum GuildMemberRank {
+  MEMBER
+  OFFICER
+  LEADER
+}
+
+enum GuildStatus {
+  OPEN
+  RECRUITING
+  CLOSED
+}
+
+enum GuildBuildingType {
+  GUILD_HALL
+  VAULT
+  ANCIENT_HALL
+  SHADOW_MARKET
+  HARVEST_ALTAR
+  WAR_ROOM
+  TRAINING_GROUNDS
+  VOID_GATE
+  ABYSSAL_SANCTUM
+}
+
+enum PremiumAccountType {
+  BUYMEACOFFEE
+  PATREON
+}
+
+enum TransactionType {
+  SUBSCRIPTION
+  ONETIME_SUPPORT
+  EXTRA_PURCHASE
+  COINS
+}
+
+enum InboxMessageType {
+  GUILD_INVITE
+  GUILD_KICK
+  GUILD_ACCEPT
+  GUILD_ATTACK
+  GUILD_DEFENSE
+  GUILD_PROMOTE
+  GUILD_DEMOTE
+  MESSAGE
+  POT_CLAIMED
+  PREMIUM_ENDED
+}
+
+enum InboxMessageFrom {
+  PLAYER
+  GUILD
+  SYSTEM
+}
+
+// ============================================================================
+// HOMESTEAD SYSTEM
+// ============================================================================
+
+model Homestead {
+  id               Int       @id @default(autoincrement())
+  characterId      String    @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lastWorkerRefresh DateTime?
+  
+  character        Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  activities       HomesteadActivity[]
+  buildings        HomesteadBuilding[]
+  resources        HomesteadResource[]
+  workers          HomesteadWorker[]
+  availableWorkers AvailableWorker[]
+}
+
+model HomesteadActivity {
+  id              Int       @id @default(autoincrement())
+  homesteadId     Int
+  activityType    String    // 'woodcutting', 'mining', 'construction', 'blacksmithing', 'jewelcrafting', 'alchemy'
+  level           Int       @default(1)
+  currentXP       Int       @default(0)
+  totalXP         Int       @default(0)
+  pityCounters    Json?     // { "1": count, "2": count, "3": count } - loot count since last quality drop
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  homestead       Homestead @relation(fields: [homesteadId], references: [id], onDelete: Cascade)
+  
+  @@unique([homesteadId, activityType])
+  @@index([homesteadId])
+}
+
+model HomesteadBuilding {
+  id              Int       @id @default(autoincrement())
+  homesteadId     Int
+  buildingType    String    // 'home', 'lumber_mill', 'quarry', 'jewelcrafting_table', 'salvage_yard', 'warehouse'
+  level           Int       @default(0) // 0 means not built yet
+  
+  // Generic storage for building-specific resources (e.g., salvage yard metal)
+  storedResources Int       @default(0)
+  
+  // Time-based construction tracking
+  buildStarted    DateTime?
+  buildFinish     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  homestead       Homestead @relation(fields: [homesteadId], references: [id], onDelete: Cascade)
+  
+  @@unique([homesteadId, buildingType])
+  @@index([homesteadId])
+}
+
+model HomesteadResource {
+  id              Int       @id @default(autoincrement())
+  homesteadId     Int
+  name            String    // 'wood', 'rock', 'planks', 'stone', 'jewels', 'metal'
+  type            String    // Resource type/category
+  subType         String?   // For resources with variants: 'oak', 'pine', 'maple', 'ebony' for wood
+  count           Int       @default(0)
+  requiredLevel   Int       @default(0)
+  consumable      Boolean   @default(true)
+  assetId         Int       @default(0)
+  quality         Int       @default(0) // 0=common, 1=rare, 2=epic, 3=legendary
+  enchantment     Json?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  homestead       Homestead @relation(fields: [homesteadId], references: [id], onDelete: Cascade)
+  
+  @@unique([homesteadId, name, subType, quality])
+  @@index([homesteadId])
+}
+
+model HomesteadWorker {
+  id              Int             @id @default(autoincrement())
+  homesteadId     Int
+  name            Int             @default(0)  // Worker enum name/type
+  skills          Json            @default("{}") // Object containing activity levels, resource bonuses, etc.
+  
+  createdAt       DateTime        @default(now())
+  endsAt          DateTime        // Worker hire contract end
+  
+  homestead       Homestead       @relation(fields: [homesteadId], references: [id], onDelete: Cascade)
+  activity        WorkerActivity?
+  
+  @@index([homesteadId])
+  @@index([endsAt])
+}
+
+model WorkerActivity {
+  id              Int             @id @default(autoincrement())
+  workerId        Int             @unique
+  type            Int             @default(0)  // Activity type enum (1=Woodcutting, 2=Mining, etc.)
+  subType         Int             @default(0)  // Resource subtype enum
+  startedAt       DateTime?
+  endedAt         DateTime?
+  lastClaimed     DateTime?
+  inputResources  Json?           // Stores consumed resources for construction: { name, count, quality }[]
+  outputResources Json?           // Stores pre-calculated output: { claimedResources, totalResources, gatheringRate }
+  
+  worker          HomesteadWorker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  
+  @@index([workerId])
+  @@index([endedAt])
+}
+
+model AvailableWorker {
+  id              Int             @id @default(autoincrement())
+  homesteadId     Int
+  name            Int             @default(0)  // Worker avatar/type identifier
+  skills          Json            @default("[]") // Array of skill bonuses: [{ activity, subType, bonusType, value }]
+  
+  createdAt       DateTime        @default(now())
+  
+  homestead       Homestead       @relation(fields: [homesteadId], references: [id], onDelete: Cascade)
+  
+  @@index([homesteadId])
+}

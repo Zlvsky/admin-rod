@@ -1,0 +1,7 @@
+{"timestamp":"2026-02-15T20:19:01.763Z","action":"LOGIN_FAILED","admin":"anonymous","metadata":{"username":"admin"},"ip":"::1"}
+{"timestamp":"2026-02-15T20:19:05.511Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}
+{"timestamp":"2026-02-15T20:19:09.147Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}
+{"timestamp":"2026-02-15T20:19:16.646Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}
+{"timestamp":"2026-02-15T20:19:24.086Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}
+{"timestamp":"2026-02-15T20:20:46.836Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}
+{"timestamp":"2026-02-15T20:21:51.168Z","action":"LOGIN_SUCCESS","admin":"admin","ip":"::1"}

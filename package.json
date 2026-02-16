@@ -1,0 +1,33 @@
+{
+  "name": "admin-rod",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Admin Panel for Realm of Dungeons",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "start": "npm run start --workspace=server",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "sync-schema": "./scripts/sync-schema.sh",
+    "lint": "npm run lint --workspaces"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prisma": "^5.19.1"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.19.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
