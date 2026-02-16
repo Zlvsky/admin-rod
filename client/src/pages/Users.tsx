@@ -4,6 +4,7 @@ import { usersApi, User } from '../api/client';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
+import { UserEditDialog } from '../components/user-editor';
 import {
   Table,
   TableBody,
@@ -23,7 +24,7 @@ import {
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { formatDate } from '@/lib/utils';
-import { Search, Crown, Trash2 } from 'lucide-react';
+import { Search, Crown, Trash2, Edit } from 'lucide-react';
 
 export function Users() {
   const [search, setSearch] = useState('');
@@ -32,6 +33,7 @@ export function Users() {
   const [premiumDays, setPremiumDays] = useState('30');
   const [showPremiumDialog, setShowPremiumDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -124,6 +126,16 @@ export function Users() {
                       <TableCell>{(user as any).characterCount || 0}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowEditDialog(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -249,6 +261,20 @@ export function Users() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* User Edit Dialog */}
+      <UserEditDialog
+        userId={selectedUser?.id || null}
+        userEmail={selectedUser?.email}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) {
+            setSelectedUser(null);
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+          }
+        }}
+      />
     </div>
   );
 }

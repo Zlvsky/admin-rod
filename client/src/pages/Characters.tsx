@@ -21,8 +21,9 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
+import { CharacterEditDialog } from '../components/character-editor';
 import { formatNumber } from '@/lib/utils';
-import { Search, Coins, Trash2 } from 'lucide-react';
+import { Search, Coins, Trash2, Pencil } from 'lucide-react';
 
 export function Characters() {
   const [search, setSearch] = useState('');
@@ -30,6 +31,9 @@ export function Characters() {
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editCharacterId, setEditCharacterId] = useState<string | null>(null);
+  const [editCharacterName, setEditCharacterName] = useState<string>('');
   const [currency, setCurrency] = useState({ gold: '0', coins: '0', honor: '0' });
   const queryClient = useQueryClient();
 
@@ -118,6 +122,18 @@ export function Characters() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
+                              setEditCharacterId(character.id);
+                              setEditCharacterName(character.name);
+                              setShowEditDialog(true);
+                            }}
+                            title="Edit Character"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
                               setSelectedCharacter(character);
                               setCurrency({
                                 gold: String(character.gold),
@@ -126,6 +142,7 @@ export function Characters() {
                               });
                               setShowCurrencyDialog(true);
                             }}
+                            title="Update Currency"
                           >
                             <Coins className="h-4 w-4" />
                           </Button>
@@ -136,6 +153,7 @@ export function Characters() {
                               setSelectedCharacter(character);
                               setShowDeleteDialog(true);
                             }}
+                            title="Delete Character"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -265,6 +283,22 @@ export function Characters() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Character Edit Dialog */}
+      <CharacterEditDialog
+        characterId={editCharacterId}
+        characterName={editCharacterName}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) {
+            setEditCharacterId(null);
+            setEditCharacterName('');
+            // Refresh the list when dialog closes
+            queryClient.invalidateQueries({ queryKey: ['characters'] });
+          }
+        }}
+      />
     </div>
   );
 }

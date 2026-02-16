@@ -335,4 +335,183 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// ==================== Premium Account Endpoints ====================
+
+const premiumAccountSchema = z.object({
+  accountType: z.enum(['BUYMEACOFFEE', 'PATREON']),
+  accountEmail: z.string().email(),
+  isVerified: z.boolean().default(false),
+});
+
+// Create premium account for user
+router.post('/:id/premium-accounts', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const { id } = req.params;
+    const data = premiumAccountSchema.parse(req.body);
+
+    // Check user exists
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Check for existing account of same type
+    const existing = await prisma.premiumAccount.findFirst({
+      where: { userId: id, accountType: data.accountType }
+    });
+
+    if (existing) {
+      res.status(400).json({ error: `User already has a ${data.accountType} account linked` });
+      return;
+    }
+
+    const premiumAccount = await prisma.premiumAccount.create({
+      data: {
+        userId: id,
+        accountType: data.accountType,
+        accountEmail: data.accountEmail,
+        isVerified: data.isVerified,
+      }
+    });
+
+    logAuditAction(req.admin?.username || 'unknown', 'PREMIUM_ACCOUNT_CREATE', {
+      target: { type: 'user', id, name: user.email },
+      metadata: {
+        premiumAccountId: premiumAccount.id,
+        accountType: data.accountType,
+        accountEmail: data.accountEmail,
+      },
+      ip: req.ip || 'unknown',
+    });
+
+    res.status(201).json(premiumAccount);
+  } catch (error) {
+    console.error('[Users] Create premium account error:', error);
+    res.status(500).json({ error: 'Failed to create premium account' });
+  }
+});
+
+// Update premium account
+router.patch('/:id/premium-accounts/:accountId', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const { id, accountId } = req.params;
+    const data = premiumAccountSchema.partial().parse(req.body);
+
+    // Check user exists
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Check account exists and belongs to user
+    const existing = await prisma.premiumAccount.findFirst({
+      where: { id: parseInt(accountId), userId: id }
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Premium account not found' });
+      return;
+    }
+
+    // If changing account type, check for duplicates
+    if (data.accountType && data.accountType !== existing.accountType) {
+      const duplicate = await prisma.premiumAccount.findFirst({
+        where: { userId: id, accountType: data.accountType }
+      });
+      if (duplicate) {
+        res.status(400).json({ error: `User already has a ${data.accountType} account linked` });
+        return;
+      }
+    }
+
+    const updated = await prisma.premiumAccount.update({
+      where: { id: parseInt(accountId) },
+      data,
+    });
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (data.accountType && data.accountType !== existing.accountType) {
+      changes.accountType = { from: existing.accountType, to: data.accountType };
+    }
+    if (data.accountEmail && data.accountEmail !== existing.accountEmail) {
+      changes.accountEmail = { from: existing.accountEmail, to: data.accountEmail };
+    }
+    if (data.isVerified !== undefined && data.isVerified !== existing.isVerified) {
+      changes.isVerified = { from: existing.isVerified, to: data.isVerified };
+    }
+
+    logAuditAction(req.admin?.username || 'unknown', 'PREMIUM_ACCOUNT_UPDATE', {
+      target: { type: 'user', id, name: user.email },
+      metadata: { premiumAccountId: parseInt(accountId) },
+      changes,
+      ip: req.ip || 'unknown',
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('[Users] Update premium account error:', error);
+    res.status(500).json({ error: 'Failed to update premium account' });
+  }
+});
+
+// Delete premium account
+router.delete('/:id/premium-accounts/:accountId', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const { id, accountId } = req.params;
+
+    // Check user exists
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { email: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Check account exists and belongs to user
+    const existing = await prisma.premiumAccount.findFirst({
+      where: { id: parseInt(accountId), userId: id }
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: 'Premium account not found' });
+      return;
+    }
+
+    await prisma.premiumAccount.delete({
+      where: { id: parseInt(accountId) }
+    });
+
+    logAuditAction(req.admin?.username || 'unknown', 'PREMIUM_ACCOUNT_DELETE', {
+      target: { type: 'user', id, name: user.email },
+      metadata: {
+        premiumAccountId: parseInt(accountId),
+        accountType: existing.accountType,
+        accountEmail: existing.accountEmail,
+      },
+      ip: req.ip || 'unknown',
+    });
+
+    res.json({ success: true, message: 'Premium account deleted' });
+  } catch (error) {
+    console.error('[Users] Delete premium account error:', error);
+    res.status(500).json({ error: 'Failed to delete premium account' });
+  }
+});
+
 export default router;
